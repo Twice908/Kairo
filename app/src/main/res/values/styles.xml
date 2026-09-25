@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Kairo" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorAccent">#376B5A</item>
+        <item name="android:fontFamily">sans</item>
+    </style>
+</resources>
