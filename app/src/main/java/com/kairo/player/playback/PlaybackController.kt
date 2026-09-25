@@ -38,6 +38,7 @@ class PlaybackController @Inject constructor(
     private val mutableConnectionState = MutableStateFlow<PlaybackConnectionState>(
         PlaybackConnectionState.Connecting,
     )
+    private val mutableQueueState = MutableStateFlow(PlaybackQueueState())
     private var mediaController: MediaController? = null
     private val controllerFuture = MediaController.Builder(
         context,
@@ -46,6 +47,7 @@ class PlaybackController @Inject constructor(
 
     val playbackState: StateFlow<PlaybackState> = mutablePlaybackState.asStateFlow()
     val connectionState: StateFlow<PlaybackConnectionState> = mutableConnectionState.asStateFlow()
+    val queueState: StateFlow<PlaybackQueueState> = mutableQueueState.asStateFlow()
     val currentTrack: Track?
         get() = playbackState.value.currentTrack
 
@@ -63,7 +65,7 @@ class PlaybackController @Inject constructor(
                     mediaController = controller
                     controller.addListener(this)
                     mutableConnectionState.value = PlaybackConnectionState.Connected
-                    publishPlaybackState(controller)
+                    publishPlaybackState(controller, updateQueue = true)
                 } catch (exception: Exception) {
                     mutableConnectionState.value = PlaybackConnectionState.Failed(
                         exception.cause?.message ?: exception.message,
@@ -113,6 +115,59 @@ class PlaybackController @Inject constructor(
     }
 
     @MainThread
+    fun selectQueueItem(index: Int) {
+        val controller = requireController()
+        require(index in 0 until controller.mediaItemCount) { "Queue index is outside the queue" }
+        controller.seekToDefaultPosition(index)
+        controller.play()
+        publishPlaybackState(controller, updateQueue = true)
+    }
+
+    @MainThread
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        val controller = requireController()
+        require(fromIndex in 0 until controller.mediaItemCount) { "Queue index is outside the queue" }
+        require(toIndex in 0 until controller.mediaItemCount) { "Queue index is outside the queue" }
+        if (fromIndex != toIndex) controller.moveMediaItem(fromIndex, toIndex)
+        publishPlaybackState(controller, updateQueue = true)
+    }
+
+    @MainThread
+    fun setShuffleEnabled(enabled: Boolean) {
+        val controller = requireController()
+        controller.shuffleModeEnabled = enabled
+        publishPlaybackState(controller, updateQueue = true)
+    }
+
+    @MainThread
+    fun cycleRepeatMode() {
+        val controller = requireController()
+        controller.repeatMode = when (controller.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+        publishPlaybackState(controller, updateQueue = true)
+    }
+
+    @MainThread
+    fun setDeviceVolume(volume: Int) {
+        val controller = requireController()
+        controller.deviceVolume = volume.coerceIn(
+            controller.deviceInfo.minVolume,
+            controller.deviceInfo.maxVolume,
+        )
+        publishPlaybackState(controller, updateQueue = true)
+    }
+
+    @MainThread
+    fun setDeviceMuted(muted: Boolean) {
+        val controller = requireController()
+        controller.setDeviceMuted(muted)
+        publishPlaybackState(controller, updateQueue = true)
+    }
+
+    @MainThread
     fun setQueue(tracks: List<Track>, startIndex: Int = 0, startPositionMs: Long = 0L) {
         require(startPositionMs >= 0L) { "Start position must not be negative" }
         if (tracks.isNotEmpty()) {
@@ -127,7 +182,7 @@ class PlaybackController @Inject constructor(
             controller.setMediaItems(tracks.map(Track::toMediaItem), startIndex, startPositionMs)
             controller.prepare()
         }
-        publishPlaybackState(controller)
+        publishPlaybackState(controller, updateQueue = true)
     }
 
     @MainThread
@@ -143,6 +198,10 @@ class PlaybackController @Inject constructor(
                     uri = resolved.stream.url,
                     title = resolved.track.title,
                     mimeType = resolved.stream.mimeType,
+                    artist = resolved.track.artists.joinToString { it.name },
+                    artworkUri = resolved.track.album?.artwork?.uri,
+                    sourceId = resolved.track.sourceId,
+                    sourceTrackId = resolved.track.id,
                 )
             },
             startIndex,
@@ -159,7 +218,7 @@ class PlaybackController @Inject constructor(
             stateMapper.reset()
             controller.prepare()
         }
-        publishPlaybackState(controller)
+        publishPlaybackState(controller, updateQueue = true)
     }
 
     @MainThread
@@ -170,6 +229,10 @@ class PlaybackController @Inject constructor(
                 uri = track.stream.url,
                 title = track.track.title,
                 mimeType = track.stream.mimeType,
+                artist = track.track.artists.joinToString { it.name },
+                artworkUri = track.track.album?.artwork?.uri,
+                sourceId = track.track.sourceId,
+                sourceTrackId = track.track.id,
             ),
         )
     }
@@ -180,7 +243,7 @@ class PlaybackController @Inject constructor(
         require(index in 0 until controller.mediaItemCount) { "Queue index is outside the queue" }
         controller.removeMediaItem(index)
         if (controller.mediaItemCount == 0) audioQualityManager.clear()
-        publishPlaybackState(controller)
+        publishPlaybackState(controller, updateQueue = true)
     }
 
     @MainThread
@@ -189,27 +252,42 @@ class PlaybackController @Inject constructor(
         stateMapper.reset()
         audioQualityManager.clear()
         controller.clearMediaItems()
-        publishPlaybackState(controller)
+        publishPlaybackState(controller, updateQueue = true)
     }
 
     override fun onEvents(player: Player, events: Player.Events) {
-        publishPlaybackState(player)
+        publishPlaybackState(player, updateQueue = true)
     }
 
     override fun onPlayerError(error: PlaybackException) {
         stateMapper.recordError(error)
-        mediaController?.let(::publishPlaybackState)
+        mediaController?.let { publishPlaybackState(it, updateQueue = true) }
     }
 
     private fun requireController(): MediaController = checkNotNull(mediaController) {
         "Playback service is not connected: ${connectionState.value}"
     }
 
-    private fun publishPlaybackState(player: Player) {
+    private fun publishPlaybackState(player: Player, updateQueue: Boolean = false) {
         mutablePlaybackState.value = stateMapper.map(
             player,
             Track.fromMediaItem(player.currentMediaItem),
         )
+        if (updateQueue) {
+            val tracks = List(player.mediaItemCount) { index ->
+                Track.fromMediaItem(player.getMediaItemAt(index))
+            }.filterNotNull()
+            val queue = PlaybackQueueState(
+                tracks = tracks,
+                currentIndex = player.currentMediaItemIndex.takeIf { it in tracks.indices } ?: -1,
+                shuffleEnabled = player.shuffleModeEnabled,
+                repeatMode = player.repeatMode,
+                deviceVolume = player.deviceVolume,
+                maxDeviceVolume = player.deviceInfo.maxVolume,
+                deviceMuted = player.isDeviceMuted,
+            )
+            if (queue != mutableQueueState.value) mutableQueueState.value = queue
+        }
         handler.removeCallbacks(positionUpdater)
         if (player.isPlaying) handler.postDelayed(positionUpdater, POSITION_UPDATE_INTERVAL_MS)
     }

@@ -52,6 +52,7 @@ class SafLocalAudioDocumentStore(context: Context) : LocalAudioDocumentStore {
 
     override suspend fun listDocuments(): List<LocalAudioDocument> = withContext(Dispatchers.IO) {
         val documents = linkedMapOf<String, LocalAudioDocument>()
+        listBundledDemoDocuments().forEach { documents[it.uri] = it }
         selectedUris(TREE_SELECTIONS).forEach { treeUriString ->
             runCatching { addTreeDocuments(Uri.parse(treeUriString), documents) }
         }
@@ -62,10 +63,11 @@ class SafLocalAudioDocumentStore(context: Context) : LocalAudioDocumentStore {
     }
 
     override suspend fun getDocument(uri: String): LocalAudioDocument? = withContext(Dispatchers.IO) {
-        getDocumentOnIo(uri)
+        getBundledDemoDocument(uri) ?: getDocumentOnIo(uri)
     }
 
     override suspend fun getMetadata(uri: String): LocalAudioMetadata? = withContext(Dispatchers.IO) {
+        if (Uri.parse(uri).scheme == DEMO_ASSET_SCHEME) return@withContext null
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(appContext, Uri.parse(uri))
@@ -153,6 +155,27 @@ class SafLocalAudioDocumentStore(context: Context) : LocalAudioDocumentStore {
         )
     }
 
+    private fun listBundledDemoDocuments(): List<LocalAudioDocument> =
+        appContext.assets.list(DEMO_AUDIO_ASSET_DIRECTORY).orEmpty()
+            .filter { SupportedAudioFormats.mimeType(it, null) != null }
+            .map { displayName ->
+                LocalAudioDocument(
+                    uri = Uri.parse(DEMO_ASSET_URI_BASE).buildUpon().appendPath(displayName).build().toString(),
+                    displayName = displayName,
+                    mimeType = null,
+                )
+            }
+
+    private fun getBundledDemoDocument(uriString: String): LocalAudioDocument? {
+        val uri = Uri.parse(uriString)
+        if (uri.scheme != DEMO_ASSET_SCHEME) return null
+        val assetPath = uri.path?.removePrefix("/") ?: return null
+        val fileName = assetPath.removePrefix("$DEMO_AUDIO_ASSET_DIRECTORY/")
+        if (fileName.isEmpty() || fileName == assetPath || '/' in fileName) return null
+        if (fileName !in appContext.assets.list(DEMO_AUDIO_ASSET_DIRECTORY).orEmpty()) return null
+        return LocalAudioDocument(uriString, fileName, null)
+    }
+
     private fun addSelection(key: String, uri: String) {
         preferences.edit()
             .putStringSet(key, selectedUris(key) + uri)
@@ -169,6 +192,9 @@ class SafLocalAudioDocumentStore(context: Context) : LocalAudioDocumentStore {
         preferences.getStringSet(key, emptySet()).orEmpty().toSet()
 
     private companion object {
+        const val DEMO_AUDIO_ASSET_DIRECTORY = "demo_music"
+        const val DEMO_ASSET_SCHEME = "asset"
+        const val DEMO_ASSET_URI_BASE = "asset:///demo_music/"
         const val PREFERENCES_NAME = "local_audio_selections"
         const val TREE_SELECTIONS = "tree_uris"
         const val DOCUMENT_SELECTIONS = "document_uris"

@@ -57,7 +57,7 @@ class LocalMusicSource(
         if (SupportedAudioFormats.mimeType(document.displayName, document.mimeType) == null) return null
         val metadata = documentStore.getMetadata(document.uri)
         val title = metadata?.title?.takeIf(String::isNotBlank)
-            ?: document.displayName.substringBeforeLast('.', document.displayName)
+            ?: document.displayName
         val artist = metadata?.artist?.takeIf(String::isNotBlank)?.let { name ->
             Artist(id = "$SOURCE_ID:artist:${name.lowercase()}", sourceId = SOURCE_ID, name = name)
         }

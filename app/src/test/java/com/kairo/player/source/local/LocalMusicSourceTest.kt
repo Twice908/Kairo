@@ -11,6 +11,28 @@ import org.junit.Test
 
 class LocalMusicSourceTest {
     @Test
+    fun exposesBundledDemoAudioWithExactFilenamesAndNativeMimeTypes() = runBlocking {
+        val documents = listOf(
+            "Raatein_Guzaari_Aditya_Rikhari.flac",
+            "Suroor.flac",
+            "Ultrafunk.wav",
+            "dhurandhar_baloch.wav",
+        ).map { name ->
+            LocalAudioDocument("asset:///demo_music/$name", name, null)
+        }
+        val source = LocalMusicSource(FakeLocalAudioDocumentStore(documents))
+        val tracks = source.search("").sortedBy { it.title }
+
+        assertEquals(documents.map { it.displayName }.sorted(), tracks.map { it.title })
+        assertTrue(tracks.all { it.artists.isEmpty() && it.album == null && it.durationMs == null })
+        tracks.forEach { track ->
+            val stream = source.resolveStream(track.id).single()
+            assertEquals(track.id, stream.url)
+            assertEquals(if (track.title.endsWith(".flac")) "audio/flac" else "audio/wav", stream.mimeType)
+        }
+    }
+
+    @Test
     fun searchReturnsSupportedUserFilesWithAvailableMetadata() = runBlocking {
         val document = LocalAudioDocument(
             uri = "content://music/track-1",

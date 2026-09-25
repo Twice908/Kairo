@@ -58,3 +58,13 @@ sealed interface PlaybackState {
         override val currentTrack: Track? = null,
     ) : PlaybackState
 }
+
+data class PlaybackQueueState(
+    val tracks: List<Track> = emptyList(),
+    val currentIndex: Int = -1,
+    val shuffleEnabled: Boolean = false,
+    val repeatMode: Int = androidx.media3.common.Player.REPEAT_MODE_OFF,
+    val deviceVolume: Int? = null,
+    val maxDeviceVolume: Int? = null,
+    val deviceMuted: Boolean? = null,
+)
