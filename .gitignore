@@ -11,6 +11,7 @@ out/
 *.apk
 *.aab
 *.class
+*.hprof
 *.jks
 *.keystore
 secrets.properties
