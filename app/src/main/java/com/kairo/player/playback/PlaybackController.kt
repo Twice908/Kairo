@@ -12,6 +12,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.kairo.player.audio.AudioQualityManager
+import com.kairo.player.domain.model.ResolvedTrack
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -130,6 +131,26 @@ class PlaybackController @Inject constructor(
     }
 
     @MainThread
+    fun setResolvedQueue(
+        tracks: List<ResolvedTrack>,
+        startIndex: Int = 0,
+        startPositionMs: Long = 0L,
+    ) {
+        setQueue(
+            tracks.map { resolved ->
+                Track(
+                    id = "${resolved.track.sourceId}:${resolved.track.id}",
+                    uri = resolved.stream.url,
+                    title = resolved.track.title,
+                    mimeType = resolved.stream.mimeType,
+                )
+            },
+            startIndex,
+            startPositionMs,
+        )
+    }
+
+    @MainThread
     fun addToQueue(track: Track) {
         val controller = requireController()
         val wasEmpty = controller.mediaItemCount == 0
@@ -139,6 +160,18 @@ class PlaybackController @Inject constructor(
             controller.prepare()
         }
         publishPlaybackState(controller)
+    }
+
+    @MainThread
+    fun addResolvedTrack(track: ResolvedTrack) {
+        addToQueue(
+            Track(
+                id = "${track.track.sourceId}:${track.track.id}",
+                uri = track.stream.url,
+                title = track.track.title,
+                mimeType = track.stream.mimeType,
+            ),
+        )
     }
 
     @MainThread
