@@ -29,8 +29,8 @@ object SpotiFlacModule {
         SpotiFlacMusicSource(api)
 
         // private const val BASE_URL = "https://triton.squid.wtf"
-    private const val BASE_URL = "https://tidal-api.binimum.org/"
-    // private const val BASE_URL = "https://maus.qqdl.site"
+    // private const val BASE_URL = "https://tidal-api.binimum.org/"
+    private const val BASE_URL = "https://maus.qqdl.site"
     // private const val BASE_URL = "https://vogel.qqdl.site"
     // private const val BASE_URL = "https://katze.qqdl.site"
     // private const val BASE_URL = "https://hund.qqdl.site"
