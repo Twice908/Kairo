@@ -6,6 +6,7 @@ import com.kairo.player.source.local.LocalAudioDocumentStore
 import com.kairo.player.source.local.LocalMusicSource
 import com.kairo.player.source.local.SafLocalAudioDocumentStore
 import com.kairo.player.source.mock.MockMusicSource
+import com.kairo.player.source.spotiflac.SpotiFlacMusicSource
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,5 +37,7 @@ object MusicSourceModule {
     fun provideMusicSourceRegistry(
         localMusicSource: LocalMusicSource,
         mockMusicSource: MockMusicSource,
-    ): MusicSourceRegistry = MusicSourceRegistry(listOf(localMusicSource, mockMusicSource))
+        spotiFlacMusicSource: SpotiFlacMusicSource,
+    ): MusicSourceRegistry =
+        MusicSourceRegistry(listOf(localMusicSource, mockMusicSource, spotiFlacMusicSource))
 }
