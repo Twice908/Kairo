@@ -6,9 +6,9 @@ import com.kairo.player.source.local.LocalAudioDocumentStore
 import com.kairo.player.source.local.LocalMusicSource
 import com.kairo.player.source.local.SafLocalAudioDocumentStore
 import com.kairo.player.source.mock.MockMusicSource
-import com.kairo.player.source.spotiflac.SpotiFlacMusicSource
 import dagger.Module
 import dagger.Provides
+import com.kairo.player.source.navidrome.NavidromeMusicSource
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
@@ -37,7 +37,7 @@ object MusicSourceModule {
     fun provideMusicSourceRegistry(
         localMusicSource: LocalMusicSource,
         mockMusicSource: MockMusicSource,
-        spotiFlacMusicSource: SpotiFlacMusicSource,
+        navidromeMusicSource: NavidromeMusicSource,
     ): MusicSourceRegistry =
-        MusicSourceRegistry(listOf(localMusicSource, mockMusicSource, spotiFlacMusicSource))
+        MusicSourceRegistry(listOf(localMusicSource, mockMusicSource, navidromeMusicSource))
 }

@@ -7,6 +7,7 @@
 
     <application
         android:name=".KairoApplication"
+        android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:icon="@mipmap/kairo_touch_icon"
         android:roundIcon="@mipmap/kairo_touch_icon"

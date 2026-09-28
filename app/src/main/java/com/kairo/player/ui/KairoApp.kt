@@ -249,6 +249,10 @@ private fun KairoAppContent(
                     versionName = versionName,
                     onAddMusicFolder = { folderPicker.launch(null) },
                     onOpenDiagnostics = { navController.navigate(KairoRoute.Diagnostics) },
+                    serverUrl = viewModel.savedServerUrl,
+                    serverUser = viewModel.savedServerUser,
+                    serverPassword = viewModel.savedServerPassword,
+                    onSaveServer = viewModel::saveServerAndTest,
                 )
             }
         }

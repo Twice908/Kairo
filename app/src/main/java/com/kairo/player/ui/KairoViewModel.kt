@@ -39,6 +39,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.kairo.player.server.NavidromeApiService
+import com.kairo.player.server.ServerConfig
 import kotlinx.coroutines.flow.update
 
 @HiltViewModel
@@ -51,6 +53,8 @@ class KairoViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
     private val audioDiagnostics: AudioDiagnostics,
     private val localMusicSource: LocalMusicSource,
+    private val serverConfig: ServerConfig,
+    private val navidromeApi: NavidromeApiService,
 ) : ViewModel() {
     private val mutableSearchState = MutableStateFlow(SearchUiState())
     private val mutableMessage = MutableStateFlow<String?>(null)
@@ -263,6 +267,33 @@ class KairoViewModel @Inject constructor(
         }
     }
 
+        val savedServerUrl: String get() = serverConfig.serverUrl
+    val savedServerUser: String get() = serverConfig.username
+    val savedServerPassword: String get() = serverConfig.password
+
+    fun saveServerAndTest(url: String, user: String, password: String) {
+        if (!url.trim().startsWith("http://") && !url.trim().startsWith("https://")) {
+            mutableMessage.value = "Server URL must start with http:// or https://"
+            return
+        }
+        serverConfig.serverUrl = url
+        serverConfig.username = user
+        serverConfig.password = password
+        viewModelScope.launch {
+            mutableMessage.value = try {
+                val response = navidromeApi.ping().response
+                if (response.isOk) {
+                    "Connected to Navidrome."
+                } else {
+                    "Login rejected: ${response.error?.message ?: "unknown error"}"
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                "Could not reach server: ${e.message ?: "unknown error"}"
+            }
+        }
+    }
     fun dismissMessage() {
         mutableMessage.value = null
     }

@@ -103,6 +103,7 @@ import com.kairo.player.ui.LocalKairoMotionEnabled
 import com.kairo.player.ui.theme.KairoCorners
 import com.kairo.player.ui.theme.KairoSizes
 import com.kairo.player.ui.theme.KairoSpacing
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
 private fun ScreenHeading(title: String, subtitle: String? = null) {
@@ -874,6 +875,10 @@ fun SettingsScreen(
     versionName: String,
     onAddMusicFolder: (() -> Unit)? = null,
     onOpenDiagnostics: (() -> Unit)? = null,
+    serverUrl: String = "",
+    serverUser: String = "",
+    serverPassword: String = "",
+    onSaveServer: ((String, String, String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -882,6 +887,42 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(KairoSpacing.large),
     ) {
         item { ScreenHeading("Settings") }
+        item {
+            var url by remember { mutableStateOf(serverUrl) }
+            var user by remember { mutableStateOf(serverUser) }
+            var pass by remember { mutableStateOf(serverPassword) }
+            Column(verticalArrangement = Arrangement.spacedBy(KairoSpacing.small)) {
+                SectionHeader("Server")
+                Text("Connect to your Navidrome server.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Server URL") },
+                    placeholder = { Text("http://100.x.x.x:4533") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = user,
+                    onValueChange = { user = it },
+                    label = { Text("Username") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = pass,
+                    onValueChange = { pass = it },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    onClick = { onSaveServer?.invoke(url, user, pass) },
+                    enabled = onSaveServer != null,
+                ) { Text("Save and test connection") }
+            }
+        }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(KairoSpacing.small)) {
                 SectionHeader("Playback")

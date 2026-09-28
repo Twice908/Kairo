@@ -23,10 +23,9 @@ class NetworkClientFactory @Inject constructor() {
         .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .build()
 
-    fun createRetrofit(baseUrl: String): Retrofit {
+    fun createRetrofit(baseUrl: String, client: OkHttpClient = httpClient): Retrofit {
         val parsedUrl = baseUrl.toHttpUrlOrNull()
-            ?: throw IllegalArgumentException("Base URL must be a valid HTTPS URL")
-        require(parsedUrl.isHttps) { "Only HTTPS endpoints are allowed" }
+            ?: throw IllegalArgumentException("Base URL must be a valid HTTP(S) URL")
         require(baseUrl.endsWith('/')) { "Retrofit base URL must end with '/'" }
         require(parsedUrl.username.isEmpty() && parsedUrl.password.isEmpty()) {
             "Credentials must not be embedded in the base URL"
@@ -34,7 +33,7 @@ class NetworkClientFactory @Inject constructor() {
 
         return Retrofit.Builder()
             .baseUrl(parsedUrl)
-            .client(httpClient)
+            .client(client)
             .addConverterFactory(json.asConverterFactory(JSON_MEDIA_TYPE))
             .build()
     }
