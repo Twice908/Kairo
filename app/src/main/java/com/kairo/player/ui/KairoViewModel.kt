@@ -277,7 +277,13 @@ class KairoViewModel @Inject constructor(
 
     fun playTrack(track: Track) {
         if (track.sourceId != LocalMusicSource.SOURCE_ID) {
-            playTracks(listOf(track), selectedIndex = 0)
+            val sourceTracks = libraryState.value.tracks.filter { it.sourceId == track.sourceId }
+            val selectedIndex = sourceTracks.indexOfFirst { it.id == track.id }
+            if (selectedIndex >= 0) {
+                playTracks(sourceTracks, selectedIndex)
+            } else {
+                playTracks(listOf(track), selectedIndex = 0)
+            }
             return
         }
         runPlaybackCommand {

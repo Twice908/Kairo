@@ -103,6 +103,25 @@ import com.kairo.player.ui.theme.KairoSizes
 import com.kairo.player.ui.theme.KairoSpacing
 
 @Composable
+private fun rememberPressScale(
+    interactionSource: MutableInteractionSource,
+    enabled: Boolean,
+    label: String,
+): Float {
+    val motionEnabled = LocalKairoMotionEnabled.current
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (motionEnabled && enabled && pressed) 0.985f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+        ),
+        label = label,
+    )
+    return scale
+}
+
+@Composable
 fun SectionHeader(
     title: String,
     modifier: Modifier = Modifier,
@@ -283,11 +302,21 @@ fun TrackRow(
     onTrailingClick: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressScale = rememberPressScale(interactionSource, onClick != null, "track-row-press")
     Row(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = KairoSizes.touchTarget)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                ) else Modifier,
+            )
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .padding(vertical = KairoSpacing.small),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium),
@@ -313,10 +342,20 @@ fun AlbumCard(
     onClick: (() -> Unit)? = null,
     fillWidth: Boolean = false,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressScale = rememberPressScale(interactionSource, onClick != null, "album-card-press")
     Column(
         modifier = modifier
             .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier.width(156.dp))
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
+            .then(
+                if (onClick != null) Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                ) else Modifier,
+            )
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale },
         verticalArrangement = Arrangement.spacedBy(KairoSpacing.small),
     ) {
         KairoArtwork(artworkIndex, Modifier.fillMaxWidth().aspectRatio(1f), imageUrl = album.artwork?.uri)
@@ -333,11 +372,21 @@ fun AlbumCard(
 
 @Composable
 fun ArtistRow(artist: Artist, modifier: Modifier = Modifier, artworkIndex: Int = 0, onClick: (() -> Unit)? = null) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressScale = rememberPressScale(interactionSource, onClick != null, "artist-row-press")
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(KairoSizes.touchTarget + KairoSpacing.medium)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
+            .then(
+                if (onClick != null) Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                ) else Modifier,
+            )
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale },
         horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -359,10 +408,20 @@ fun PlaylistCard(
     artworkIndex: Int = 0,
     onClick: (() -> Unit)? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressScale = rememberPressScale(interactionSource, onClick != null, "playlist-card-press")
     Column(
         modifier = modifier
             .width(156.dp)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
+            .then(
+                if (onClick != null) Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                ) else Modifier,
+            )
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale },
         verticalArrangement = Arrangement.spacedBy(KairoSpacing.small),
     ) {
         KairoArtwork(artworkIndex, Modifier.fillMaxWidth().aspectRatio(1f))

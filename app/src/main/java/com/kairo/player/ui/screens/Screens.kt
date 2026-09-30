@@ -114,8 +114,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
 private fun ScreenHeading(title: String, subtitle: String? = null) {
+    val motionEnabled = LocalKairoMotionEnabled.current
     Column(verticalArrangement = Arrangement.spacedBy(KairoSpacing.small)) {
-        Text(title, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        AnimatedVisibility(
+            visible = true,
+            enter = if (motionEnabled) fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 12 }
+            else EnterTransition.None,
+        ) {
+            Text(title, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        }
         if (subtitle != null) {
             Text(subtitle, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -384,6 +391,15 @@ fun NowPlayingScreen(
     onDeviceMuted: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val motionEnabled = LocalKairoMotionEnabled.current
+    val artworkScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1f else 0.985f,
+        animationSpec = if (motionEnabled) spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ) else snap(),
+        label = "now-playing-artwork-scale",
+    )
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val wideLayout = maxWidth >= 600.dp && maxWidth > maxHeight
         if (wideLayout) {
@@ -398,7 +414,7 @@ fun NowPlayingScreen(
                         sharedTransitionScope,
                         "kairo-artwork-${track.id}",
                         sharedElementVisible,
-                    ),
+                    ).graphicsLayer { scaleX = artworkScale; scaleY = artworkScale },
                 )
                 NowPlayingControls(
                     track, isPlaying, isBuffering, positionMs, durationMs, quality, shuffleEnabled, repeatMode,
@@ -422,7 +438,7 @@ fun NowPlayingScreen(
                             sharedTransitionScope,
                             "kairo-artwork-${track.id}",
                             sharedElementVisible,
-                        ),
+                        ).graphicsLayer { scaleX = artworkScale; scaleY = artworkScale },
                     )
                 }
                 item {

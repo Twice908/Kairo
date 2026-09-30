@@ -111,7 +111,11 @@ class PlaybackController @Inject constructor(
     @MainThread
     fun previous() {
         val controller = requireController()
-        if (controller.hasPreviousMediaItem()) controller.seekToPreviousMediaItem()
+        if (controller.hasPreviousMediaItem()) {
+            controller.seekToPreviousMediaItem()
+        } else {
+            controller.seekTo(0L)
+        }
     }
 
     @MainThread

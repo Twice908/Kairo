@@ -24,11 +24,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -150,8 +152,12 @@ private fun KairoAppContent(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
                 navigationIcon = {
                     if (isLibraryDetail) {
                         IconButton(onClick = { navController.popBackStack() }) {
@@ -180,31 +186,39 @@ private fun KairoAppContent(
             )
         },
         bottomBar = {
-            Column {
-                PlaybackMiniPlayer(
-                    viewModel = viewModel,
-                    sharedTransitionScope = sharedTransitionScope,
-                    sharedElementVisible = !isNowPlaying,
-                    motionEnabled = motionEnabled,
-                ) {
-                    navController.navigate(KairoRoute.NowPlaying)
-                }
-                NavigationBar {
-                    mainDestinations.forEach { destination ->
-                        val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                            (destination.route == KairoRoute.Library && isLibraryDetail)
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(destination.icon, contentDescription = null) },
-                            label = { Text(destination.label) },
-                        )
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 3.dp,
+            ) {
+                Column {
+                    PlaybackMiniPlayer(
+                        viewModel = viewModel,
+                        sharedTransitionScope = sharedTransitionScope,
+                        sharedElementVisible = !isNowPlaying,
+                        motionEnabled = motionEnabled,
+                    ) {
+                        navController.navigate(KairoRoute.NowPlaying)
+                    }
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp,
+                    ) {
+                        mainDestinations.forEach { destination ->
+                            val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                                (destination.route == KairoRoute.Library && isLibraryDetail)
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = {
+                                    navController.navigate(destination.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = { Icon(destination.icon, contentDescription = null) },
+                                label = { Text(destination.label) },
+                            )
+                        }
                     }
                 }
             }
@@ -373,7 +387,11 @@ private fun SearchDestination(viewModel: KairoViewModel, navigate: (String) -> U
         playlists = search.playlists,
         errorMessage = search.error,
         onSearch = viewModel::search,
-        onTrackClick = { track -> viewModel.playTrack(track); navigate(KairoRoute.NowPlaying) },
+        onTrackClick = { track ->
+            val selectedIndex = search.tracks.indexOfFirst { it.sourceId == track.sourceId && it.id == track.id }
+            viewModel.playTracks(search.tracks, selectedIndex)
+            navigate(KairoRoute.NowPlaying)
+        },
         onAlbumClick = { album ->
             viewModel.playTracks(search.tracks.filter { it.album?.let { item -> item.id == album.id && item.sourceId == album.sourceId } == true }, 0)
             navigate(KairoRoute.NowPlaying)
