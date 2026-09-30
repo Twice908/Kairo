@@ -3,8 +3,10 @@ package com.kairo.player.source.navidrome
 import com.kairo.player.domain.model.Album
 import com.kairo.player.domain.model.AlbumArt
 import com.kairo.player.domain.model.Artist
+import com.kairo.player.domain.model.MusicLibrary
 import com.kairo.player.domain.model.StreamInfo
 import com.kairo.player.domain.model.Track
+import com.kairo.player.data.repository.LibraryRepository
 import com.kairo.player.server.AlbumDto
 import com.kairo.player.server.ArtistDto
 import com.kairo.player.server.NavidromeApiService
@@ -15,6 +17,7 @@ import com.kairo.player.server.SubsonicResponse
 import com.kairo.player.server.SubsonicUrlBuilder
 import com.kairo.player.source.MusicSource
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,19 +27,24 @@ class NavidromeMusicSource @Inject constructor(
     private val api: NavidromeApiService,
     private val config: ServerConfig,
     private val urls: SubsonicUrlBuilder,
+    private val libraryRepository: LibraryRepository,
 ) : MusicSource {
 
     override val sourceId: String = SOURCE_ID
     override val sourceName: String = "Navidrome"
 
-    override suspend fun search(query: String): List<Track> =
-        call(emptyList()) {
+    override suspend fun search(query: String): List<Track> {
+        val cached = libraryRepository.searchTracks(sourceId, query)
+        if (cached.isNotEmpty() || !config.isConfigured) return cached
+        return call(emptyList()) {
             val result = api.search3(query.trim()).ok().searchResult3
             result?.song.orEmpty().map { it.toTrack() }
         }
+    }
 
     override suspend fun getTrack(trackId: String): Track? =
-        call(null) { api.getSong(trackId).ok().song?.toTrack() }
+        libraryRepository.getTrack(sourceId, trackId)
+            ?: call(null) { api.getSong(trackId).ok().song?.toTrack() }
 
     override suspend fun resolveStream(trackId: String): List<StreamInfo> =
         call(emptyList()) {
@@ -60,10 +68,24 @@ class NavidromeMusicSource @Inject constructor(
         }
 
     override suspend fun getArtist(artistId: String): Artist? =
-        call(null) { api.getArtist(artistId).ok().artist?.toArtist() }
+        libraryRepository.getArtist(sourceId, artistId)
+            ?: call(null) { api.getArtist(artistId).ok().artist?.toArtist() }
 
     override suspend fun getAlbum(albumId: String): Album? =
-        call(null) { api.getAlbum(albumId).ok().album?.toAlbum() }
+        libraryRepository.getAlbum(sourceId, albumId)
+            ?: call(null) { api.getAlbum(albumId).ok().album?.toAlbum() }
+
+    override suspend fun browseLibrary(): MusicLibrary =
+        libraryRepository.observeLibrary(sourceId).first()
+
+    override suspend fun getAlbumTracks(albumId: String): List<Track> =
+        libraryRepository.getAlbumTracksOnce(sourceId, albumId)
+
+    override suspend fun getArtistAlbums(artistId: String): List<Album> =
+        libraryRepository.getArtistAlbumsOnce(sourceId, artistId)
+
+    override suspend fun getArtistBiography(artistId: String): String? =
+        libraryRepository.getArtist(sourceId, artistId)?.biography
 
     // ---- helpers ----
 
@@ -86,7 +108,12 @@ class NavidromeMusicSource @Inject constructor(
         return response
     }
 
-    private fun ArtistDto.toArtist() = Artist(id = id, sourceId = sourceId, name = name)
+    private fun ArtistDto.toArtist() = Artist(
+        id = id,
+        sourceId = sourceId,
+        name = name,
+        artwork = coverArt?.let { AlbumArt(uri = urls.coverArtUrl(it)) },
+    )
 
     private fun AlbumDto.toAlbum() = Album(
         id = id,
@@ -101,7 +128,7 @@ class NavidromeMusicSource @Inject constructor(
         releaseYear = year,
     )
 
-    private fun SongDto.toTrack() = Track(
+    private fun SongDto.toTrack(albumOverride: Album? = null) = Track(
         id = id,
         sourceId = sourceId,
         title = title,
@@ -110,7 +137,7 @@ class NavidromeMusicSource @Inject constructor(
         } else {
             emptyList()
         },
-        album = albumId?.let {
+        album = albumOverride ?: albumId?.let {
             Album(
                 id = it,
                 sourceId = sourceId,

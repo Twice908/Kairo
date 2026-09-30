@@ -1,4 +1,17 @@
 package com.kairo.player.ui.components
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -185,8 +198,23 @@ fun KairoArtwork(
     index: Int,
     modifier: Modifier = Modifier,
     circular: Boolean = false,
+    imageUrl: String? = null,
 ) {
     val motionEnabled = LocalKairoMotionEnabled.current
+    var image by remember(imageUrl) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(imageUrl) {
+        image = imageUrl?.let { url ->
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val connection = URL(url).openConnection().apply {
+                        connectTimeout = 5_000
+                        readTimeout = 5_000
+                    }
+                    connection.getInputStream().use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+                }.getOrNull()
+            }
+        }
+    }
     AnimatedContent(
         targetState = index,
         modifier = modifier,
@@ -197,7 +225,14 @@ fun KairoArtwork(
         },
         label = "artwork-crossfade",
     ) { artworkIndex ->
-        ArtworkCanvas(artworkIndex, Modifier.fillMaxSize(), circular)
+        val shape = if (circular) CircleShape else RoundedCornerShape(KairoCorners.small)
+        Box(Modifier.fillMaxSize().clip(shape)) {
+            if (image == null) {
+                ArtworkCanvas(artworkIndex, Modifier.fillMaxSize(), circular)
+            } else {
+                Image(image!!, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            }
+        }
     }
 }
 
@@ -257,7 +292,7 @@ fun TrackRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium),
     ) {
-        KairoArtwork(artworkIndex, Modifier.size(KairoSizes.trackArtwork))
+        KairoArtwork(artworkIndex, Modifier.size(KairoSizes.trackArtwork), imageUrl = track.album?.artwork?.uri)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(track.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -271,14 +306,20 @@ fun TrackRow(
 }
 
 @Composable
-fun AlbumCard(album: Album, modifier: Modifier = Modifier, artworkIndex: Int = 0, onClick: (() -> Unit)? = null) {
+fun AlbumCard(
+    album: Album,
+    modifier: Modifier = Modifier,
+    artworkIndex: Int = 0,
+    onClick: (() -> Unit)? = null,
+    fillWidth: Boolean = false,
+) {
     Column(
         modifier = modifier
-            .width(156.dp)
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier.width(156.dp))
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier),
         verticalArrangement = Arrangement.spacedBy(KairoSpacing.small),
     ) {
-        KairoArtwork(artworkIndex, Modifier.fillMaxWidth().aspectRatio(1f))
+        KairoArtwork(artworkIndex, Modifier.fillMaxWidth().aspectRatio(1f), imageUrl = album.artwork?.uri)
         Text(album.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
             album.artists.joinToString { it.name }.ifBlank { "Album" },
@@ -300,7 +341,7 @@ fun ArtistRow(artist: Artist, modifier: Modifier = Modifier, artworkIndex: Int =
         horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        KairoArtwork(artworkIndex, Modifier.size(KairoSizes.trackArtwork), circular = true)
+        KairoArtwork(artworkIndex, Modifier.size(KairoSizes.trackArtwork), circular = true, imageUrl = artist.artwork?.uri)
         Text(artist.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

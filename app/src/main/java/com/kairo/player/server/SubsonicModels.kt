@@ -19,6 +19,7 @@ data class SubsonicResponse(
     val song: SongDto? = null,
     val searchResult3: SearchResultDto? = null,
     val albumList2: AlbumListDto? = null,
+    val artistInfo2: ArtistInfoDto? = null,
     val scanStatus: ScanStatusDto? = null,
 ) {
     val isOk: Boolean get() = status == "ok"
@@ -41,6 +42,9 @@ data class ArtistDto(
     val albumCount: Int? = null,
     val album: List<AlbumDto> = emptyList(),
 )
+
+@Serializable
+data class ArtistInfoDto(val biography: String? = null)
 
 @Serializable
 data class AlbumDto(

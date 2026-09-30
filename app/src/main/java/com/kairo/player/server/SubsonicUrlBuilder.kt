@@ -24,6 +24,10 @@ class SubsonicUrlBuilder @Inject constructor(
         addQueryParameter("size", size.toString())
     }
 
+    fun buildCoverArtUrl(coverArtId: String?): String? = coverArtId
+        ?.takeIf { it.isNotBlank() }
+        ?.let { coverArtUrl(it) }
+
     private fun build(path: String, extra: okhttp3.HttpUrl.Builder.() -> Unit): String? {
         if (!config.isConfigured) return null
         val base = config.serverUrl.toHttpUrlOrNull() ?: return null

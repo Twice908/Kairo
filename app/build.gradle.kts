@@ -23,6 +23,10 @@ android {
         compose = true
     }
 
+    lint {
+        lintConfig = file("lint.xml")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -62,7 +66,9 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.work.runtime)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation("org.mockito:mockito-core:5.12.0")
 }

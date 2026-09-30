@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.kairo.player.audio.AudioDiagnostics
 import com.kairo.player.audio.AudioDiagnosticsSnapshot
 import com.kairo.player.data.local.entity.PlaylistEntity
+import com.kairo.player.data.local.entity.SyncStateEntity
 import com.kairo.player.data.repository.HistoryRepository
+import com.kairo.player.data.repository.LibraryRepository
 import com.kairo.player.data.repository.PlaylistRepository
 import com.kairo.player.data.repository.TrackRepository
+import com.kairo.player.data.sync.SyncProgress
 import com.kairo.player.domain.model.Album
 import com.kairo.player.domain.model.Artist
 import com.kairo.player.domain.model.Track
@@ -49,6 +52,7 @@ class KairoViewModel @Inject constructor(
     private val musicSources: MusicSourceRegistry,
     private val streamResolver: StreamResolver,
     private val trackRepository: TrackRepository,
+    private val libraryRepository: LibraryRepository,
     private val historyRepository: HistoryRepository,
     private val playlistRepository: PlaylistRepository,
     private val audioDiagnostics: AudioDiagnostics,
@@ -58,10 +62,26 @@ class KairoViewModel @Inject constructor(
 ) : ViewModel() {
     private val mutableSearchState = MutableStateFlow(SearchUiState())
     private val mutableMessage = MutableStateFlow<String?>(null)
+    private val mutableArtistDetail = MutableStateFlow(ArtistDetailUiState())
+    private val mutableAlbumDetail = MutableStateFlow(AlbumDetailUiState())
     private var searchJob: Job? = null
+    private var artistDetailJob: Job? = null
+    private var albumDetailJob: Job? = null
 
     val searchState: StateFlow<SearchUiState> = mutableSearchState.asStateFlow()
     val message: StateFlow<String?> = mutableMessage.asStateFlow()
+    val artistDetailState: StateFlow<ArtistDetailUiState> = mutableArtistDetail.asStateFlow()
+    val albumDetailState: StateFlow<AlbumDetailUiState> = mutableAlbumDetail.asStateFlow()
+    val syncState: StateFlow<SyncStateEntity?> = libraryRepository.syncState.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        null,
+    )
+    val syncProgress: StateFlow<SyncProgress> = libraryRepository.syncProgress.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        SyncProgress.Idle,
+    )
     val playbackState: StateFlow<PlaybackState> = playbackController.playbackState
     val connectionState: StateFlow<PlaybackConnectionState> = playbackController.connectionState
     val queueState: StateFlow<PlaybackQueueState> = playbackController.queueState
@@ -71,11 +91,17 @@ class KairoViewModel @Inject constructor(
         audioDiagnostics.currentSnapshot(),
     )
 
-    val libraryState: StateFlow<LibraryUiState> = combine(
+    private val libraryData = combine(
         trackRepository.observeTracks(),
+        libraryRepository.getAlbums(LibraryRepository.NAVIDROME_SOURCE_ID),
+        libraryRepository.getArtists(LibraryRepository.NAVIDROME_SOURCE_ID),
         playlistRepository.observePlaylists(),
         historyRepository.observeRecent(),
-    ) { tracks, playlists, history -> LibraryData(tracks, playlists, history) }
+    ) { tracks, albums, artists, playlists, history ->
+        LibraryData(tracks, albums, artists, playlists, history)
+    }
+
+    val libraryState: StateFlow<LibraryUiState> = libraryData
         .map { data -> loadLibraryState(data) }
         .catch { exception ->
             emit(LibraryUiState(isLoading = false, error = exception.message ?: "Library could not be loaded."))
@@ -160,6 +186,91 @@ class KairoViewModel @Inject constructor(
                         error = exception.message ?: "Search is temporarily unavailable.",
                     )
                 }
+            }
+        }
+    }
+
+    fun triggerLibrarySync() {
+        viewModelScope.launch {
+            try {
+                val result = libraryRepository.triggerSync()
+                if (!result.succeeded) mutableMessage.value = result.error ?: "Library sync failed."
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                mutableMessage.value = exception.message ?: "Library sync failed."
+            }
+        }
+    }
+
+    fun loadArtistDetail(sourceId: String, artistId: String) {
+        val current = mutableArtistDetail.value
+        if (current.sourceId == sourceId && current.artistId == artistId &&
+            (current.isLoading || current.artist != null || current.error != null)
+        ) return
+        artistDetailJob?.cancel()
+        mutableArtistDetail.value = ArtistDetailUiState(sourceId = sourceId, artistId = artistId, isLoading = true)
+        artistDetailJob = viewModelScope.launch {
+            try {
+                combine(
+                    libraryRepository.getArtists(sourceId),
+                    libraryRepository.getAlbums(sourceId),
+                ) { artists, albums ->
+                    artists.firstOrNull { it.id == artistId } to albums.filter { album ->
+                        album.artists.any { it.sourceId == sourceId && it.id == artistId }
+                    }
+                }.collect { (artist, albums) ->
+                    mutableArtistDetail.value = ArtistDetailUiState(
+                        sourceId = sourceId,
+                        artistId = artistId,
+                        artist = artist,
+                        albums = albums,
+                    )
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                mutableArtistDetail.value = ArtistDetailUiState(
+                    sourceId = sourceId,
+                    artistId = artistId,
+                    error = exception.message ?: "Artist details could not be loaded.",
+                )
+            }
+        }
+    }
+
+    fun loadAlbumDetail(sourceId: String, albumId: String) {
+        val current = mutableAlbumDetail.value
+        if (current.sourceId == sourceId && current.albumId == albumId &&
+            (current.isLoading || current.album != null || current.error != null)
+        ) return
+        albumDetailJob?.cancel()
+        mutableAlbumDetail.value = AlbumDetailUiState(sourceId = sourceId, albumId = albumId, isLoading = true)
+        albumDetailJob = viewModelScope.launch {
+            try {
+                combine(
+                    libraryRepository.getAlbums(sourceId),
+                    libraryRepository.getTracksForAlbum(sourceId, albumId),
+                ) { albums, tracks ->
+                    albums.firstOrNull { it.id == albumId } to tracks.sortedWith(
+                        compareBy<Track>({ it.discNumber ?: 0 }, { it.trackNumber ?: Int.MAX_VALUE }, { it.title }),
+                    )
+                }.collect { (album, tracks) ->
+                    mutableAlbumDetail.value = AlbumDetailUiState(
+                        sourceId = sourceId,
+                        albumId = albumId,
+                        album = album,
+                        tracks = tracks,
+                    )
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                mutableAlbumDetail.value = AlbumDetailUiState(
+                    sourceId = sourceId,
+                    albumId = albumId,
+                    error = exception.message ?: "Album details could not be loaded.",
+                )
             }
         }
     }
@@ -283,6 +394,7 @@ class KairoViewModel @Inject constructor(
             mutableMessage.value = try {
                 val response = navidromeApi.ping().response
                 if (response.isOk) {
+                    triggerLibrarySync()
                     "Connected to Navidrome."
                 } else {
                     "Login rejected: ${response.error?.message ?: "unknown error"}"
@@ -326,8 +438,10 @@ class KairoViewModel @Inject constructor(
         LibraryUiState(
             isLoading = false,
             tracks = tracks,
-            albums = tracks.mapNotNull { it.album }.distinctBy { "${it.sourceId}\u001f${it.id}" },
-            artists = tracks.flatMap { it.artists }.distinctBy { "${it.sourceId}\u001f${it.id}" },
+            albums = (data.albums + tracks.mapNotNull { it.album })
+                .distinctBy { "${it.sourceId}\u001f${it.id}" },
+            artists = (data.artists + tracks.flatMap { it.artists })
+                .distinctBy { "${it.sourceId}\u001f${it.id}" },
             playlists = data.playlists,
             recentlyPlayed = recentTracks,
         )
@@ -341,10 +455,30 @@ class KairoViewModel @Inject constructor(
 
     private data class LibraryData(
         val tracks: List<Track>,
+        val albums: List<Album>,
+        val artists: List<Artist>,
         val playlists: List<PlaylistEntity>,
         val history: List<com.kairo.player.data.local.entity.PlaybackHistoryEntity>,
     )
 }
+
+data class ArtistDetailUiState(
+    val sourceId: String? = null,
+    val artistId: String? = null,
+    val artist: Artist? = null,
+    val albums: List<Album> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+)
+
+data class AlbumDetailUiState(
+    val sourceId: String? = null,
+    val albumId: String? = null,
+    val album: Album? = null,
+    val tracks: List<Track> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+)
 
 data class SearchUiState(
     val query: String = "",

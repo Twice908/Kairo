@@ -1,0 +1,6 @@
+ScanSchedule = "1h"
+
+# Navidrome's current config schema may not support a global Transcoding.Enabled option.
+# Keep ND_TRANSCODING_ENABLED in Compose as a fallback and verify against the deployed version.
+[Transcoding]
+Enabled = false

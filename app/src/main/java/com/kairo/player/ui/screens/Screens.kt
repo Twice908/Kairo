@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material.icons.outlined.SkipNext
@@ -55,11 +56,14 @@ import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.LinearEasing
@@ -85,6 +89,9 @@ import androidx.compose.ui.unit.dp
 import com.kairo.player.domain.model.Album
 import com.kairo.player.domain.model.Artist
 import com.kairo.player.domain.model.Track
+import com.kairo.player.data.local.entity.SyncStateEntity
+import com.kairo.player.data.sync.SyncPhase
+import com.kairo.player.data.sync.SyncProgress
 import com.kairo.player.ui.components.AlbumCard
 import com.kairo.player.ui.components.ArtistRow
 import com.kairo.player.ui.components.EmptyState
@@ -758,54 +765,146 @@ fun LibraryScreen(
     onPlaylistClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = KairoSpacing.large, vertical = KairoSpacing.large),
-        verticalArrangement = Arrangement.spacedBy(KairoSpacing.large),
-    ) {
-        item { ScreenHeading("Library", "Everything in your collection.") }
-        if (isLoading) {
-            item { LoadingState() }
-        } else if (errorMessage != null) {
-            item { ErrorState(errorMessage) }
-        } else {
-        item { SectionHeader("Songs") }
-        if (tracks.isEmpty()) item { EmptyState("No songs yet", "Music added to your library will appear here.", icon = Icons.Outlined.MusicNote) }
-        else items(tracks, key = { "song-${it.sourceId}-${it.id}" }) { track ->
-            TrackRow(track, artworkIndex = track.id.hashCode(), onClick = onTrackClick?.let { callback -> { callback(track) } })
+    var selectedTab by remember { mutableStateOf(0) }
+    Column(modifier = modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = KairoSpacing.large, vertical = KairoSpacing.large)) {
+            ScreenHeading("Library", "Everything in your collection.")
         }
-
-        item { SectionHeader("Albums") }
-        if (albums.isEmpty()) item { EmptyState("No albums yet", "Albums in your library will appear here.") }
-        else item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium)) {
-                items(albums, key = { "album-${it.sourceId}-${it.id}" }) { album ->
-                    AlbumCard(album, artworkIndex = album.id.hashCode(), onClick = onAlbumClick?.let { callback -> { callback(album) } })
+        PrimaryTabRow(selectedTabIndex = selectedTab) {
+            listOf("Tracks", "Albums", "Artists").forEachIndexed { index, title ->
+                Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+            }
+        }
+        when {
+            isLoading -> LoadingState(modifier = Modifier.weight(1f))
+            errorMessage != null -> ErrorState(errorMessage, modifier = Modifier.weight(1f))
+            selectedTab == 0 -> LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(KairoSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(KairoSpacing.small),
+            ) {
+                if (tracks.isEmpty()) item { EmptyState("No tracks yet", "Tracks from your server will appear here.", icon = Icons.Outlined.MusicNote) }
+                else items(tracks, key = { "library-track-${it.sourceId}-${it.id}" }) { track ->
+                    TrackRow(track, artworkIndex = track.id.hashCode(), onClick = onTrackClick?.let { callback -> { callback(track) } })
+                }
+            }
+            selectedTab == 1 -> LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(KairoSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(KairoSpacing.large),
+            ) {
+                if (albums.isEmpty()) item { EmptyState("No albums yet", "Albums from your server will appear here.") }
+                else items(albums.chunked(2), key = { row -> row.joinToString { "${it.sourceId}-${it.id}" } }) { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium)) {
+                        row.forEach { album ->
+                            AlbumCard(album, Modifier.weight(1f), album.id.hashCode(),
+                                onClick = onAlbumClick?.let { callback -> { callback(album) } }, fillWidth = true)
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+            else -> LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = KairoSpacing.large, vertical = KairoSpacing.medium),
+                verticalArrangement = Arrangement.spacedBy(KairoSpacing.small),
+            ) {
+                if (artists.isEmpty()) item { EmptyState("No artists yet", "Artists from your server will appear here.") }
+                else items(artists, key = { "library-artist-${it.sourceId}-${it.id}" }) { artist ->
+                    ArtistRow(artist, artworkIndex = artist.id.hashCode(), onClick = onArtistClick?.let { callback -> { callback(artist) } })
                 }
             }
         }
+    }
+}
 
-        item { SectionHeader("Artists") }
-        if (artists.isEmpty()) item { EmptyState("No artists yet", "Artists in your library will appear here.") }
-        else items(artists, key = { "artist-${it.sourceId}-${it.id}" }) { artist ->
-            ArtistRow(artist, artworkIndex = artist.id.hashCode(), onClick = onArtistClick?.let { callback -> { callback(artist) } })
-        }
-
-        item { SectionHeader("Playlists") }
-        if (playlists.isEmpty()) item { EmptyState("No playlists yet", "Playlists you create will appear here.") }
-        else item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium)) {
-                items(playlists, key = { it.id }) { playlist ->
-                    PlaylistCard(playlist, artworkIndex = playlist.id.hashCode(), onClick = onPlaylistClick?.let { callback -> { callback(playlist.id) } })
+@Composable
+fun ArtistDetailScreen(
+    artist: Artist?,
+    albums: List<Album>,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+    errorMessage: String? = null,
+    onAlbumClick: ((Album) -> Unit)? = null,
+) {
+    when {
+        isLoading -> LoadingState(modifier = modifier.fillMaxSize())
+        errorMessage != null -> ErrorState(errorMessage, modifier = modifier.fillMaxSize())
+        artist == null -> EmptyState("Artist unavailable", "This artist could not be found.", modifier = modifier.fillMaxSize())
+        else -> LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(KairoSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(KairoSpacing.large),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(KairoSpacing.medium)) {
+                    KairoArtwork(artist.id.hashCode(), Modifier.fillMaxWidth().height(220.dp), imageUrl = artist.artwork?.uri)
+                    ScreenHeading(artist.name)
+                    artist.biography?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    SectionHeader("Albums")
+                }
+            }
+            if (albums.isEmpty()) item { EmptyState("No albums yet", "This artist has no albums in the server library.") }
+            else items(albums.chunked(2), key = { row -> row.joinToString { "${it.sourceId}-${it.id}" } }) { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(KairoSpacing.medium)) {
+                    row.forEach { album ->
+                        AlbumCard(album, Modifier.weight(1f), album.id.hashCode(),
+                            onClick = onAlbumClick?.let { callback -> { callback(album) } }, fillWidth = true)
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }
+    }
+}
 
-        item { SectionHeader("Recently Played") }
-        if (recentlyPlayed.isEmpty()) item { EmptyState("Nothing played yet", "Recently played music will appear here.", icon = Icons.Outlined.History) }
-        else items(recentlyPlayed, key = { "history-${it.sourceId}-${it.id}" }) { track ->
-            TrackRow(track, artworkIndex = track.id.hashCode(), onClick = onTrackClick?.let { callback -> { callback(track) } })
-        }
+@Composable
+fun AlbumDetailScreen(
+    album: Album?,
+    tracks: List<Track>,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+    errorMessage: String? = null,
+    onPlayAll: (() -> Unit)? = null,
+    onTrackClick: ((Track) -> Unit)? = null,
+) {
+    when {
+        isLoading -> LoadingState(modifier = modifier.fillMaxSize())
+        errorMessage != null -> ErrorState(errorMessage, modifier = modifier.fillMaxSize())
+        album == null -> EmptyState("Album unavailable", "This album could not be found.", modifier = modifier.fillMaxSize())
+        else -> LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(KairoSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(KairoSpacing.medium),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(KairoSpacing.medium)) {
+                    KairoArtwork(album.id.hashCode(), Modifier.fillMaxWidth().aspectRatio(1f), imageUrl = album.artwork?.uri)
+                    ScreenHeading(album.title)
+                    Text(
+                        listOfNotNull(album.artists.joinToString { it.name }.ifBlank { null }, album.releaseYear?.toString(), "${tracks.size} tracks")
+                            .joinToString(" · "),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(onClick = onPlayAll ?: {}, enabled = tracks.isNotEmpty() && onPlayAll != null) {
+                        Icon(Icons.Outlined.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(KairoSpacing.small))
+                        Text("Play all")
+                    }
+                    SectionHeader("Tracks")
+                }
+            }
+            if (tracks.isEmpty()) item { EmptyState("No tracks yet", "This album has no available tracks.") }
+            else items(tracks, key = { "album-track-${it.sourceId}-${it.id}" }) { track ->
+                TrackRow(
+                    track = track,
+                    artworkIndex = track.id.hashCode(),
+                    subtitle = track.trackNumber?.let { "$it · ${track.artists.joinToString { artist -> artist.name }}" }
+                        ?.trimEnd(' ', '·') ?: track.artists.joinToString { it.name }.ifBlank { "Unknown artist" },
+                    onClick = onTrackClick?.let { callback -> { callback(track) } },
+                )
+            }
         }
     }
 }
@@ -879,6 +978,9 @@ fun SettingsScreen(
     serverUser: String = "",
     serverPassword: String = "",
     onSaveServer: ((String, String, String) -> Unit)? = null,
+    syncState: SyncStateEntity? = null,
+    syncProgress: SyncProgress = SyncProgress.Idle,
+    onResyncLibrary: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -948,6 +1050,53 @@ fun SettingsScreen(
             }
         }
         item {
+            val running = syncProgress as? SyncProgress.Running
+            val syncStatus = when {
+                running != null -> "Syncing ${running.phase.name.lowercase()}"
+                syncState?.lastSyncStatus == "success" -> "Success"
+                syncState?.lastSyncStatus == "partial" -> "Partial"
+                syncState?.lastSyncStatus == "failed" -> "Failed"
+                syncState?.lastSyncStatus == "running" -> "Interrupted"
+                else -> "Never"
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(KairoSpacing.small)) {
+                SectionHeader("Library sync status")
+                Text(
+                    "Status: $syncStatus",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (syncState?.lastSyncStatus == "failed") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    "Last sync: ${syncState?.lastSyncCompletedAt?.let(::formatSyncAge) ?: "Never"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "${syncState?.artistCount ?: 0} artists · ${syncState?.albumCount ?: 0} albums · ${syncState?.trackCount ?: 0} tracks",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (running != null) {
+                    Text("${running.progress} of ${running.total} ${running.phase.name.lowercase()}")
+                    LinearProgressIndicator(
+                        progress = { if (running.total == 0) 0f else running.progress.toFloat() / running.total },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                syncState?.lastSyncError?.let { error ->
+                    Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                Button(
+                    onClick = onResyncLibrary ?: {},
+                    enabled = onResyncLibrary != null && running == null,
+                ) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(KairoSpacing.small))
+                    Text("Resync library")
+                }
+            }
+        }
+        item {
             Column(verticalArrangement = Arrangement.spacedBy(KairoSpacing.small)) {
                 SectionHeader("Appearance")
                 Text("Kairo follows your device appearance setting.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -960,4 +1109,15 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+private fun formatSyncAge(timestamp: Long, now: Long = System.currentTimeMillis()): String {
+    val elapsedSeconds = (now - timestamp).coerceAtLeast(0L) / 1_000L
+    if (elapsedSeconds < 60L) return "just now"
+    val minutes = elapsedSeconds / 60L
+    if (minutes < 60L) return "$minutes ${if (minutes == 1L) "minute" else "minutes"} ago"
+    val hours = minutes / 60L
+    if (hours < 24L) return "$hours ${if (hours == 1L) "hour" else "hours"} ago"
+    val days = hours / 24L
+    return "$days ${if (days == 1L) "day" else "days"} ago"
 }

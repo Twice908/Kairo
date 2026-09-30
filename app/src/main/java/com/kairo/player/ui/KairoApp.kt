@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.material.icons.outlined.Home
@@ -40,10 +41,12 @@ import com.kairo.player.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.ExitTransition
@@ -67,6 +70,8 @@ import com.kairo.player.ui.components.PlaylistVisual
 import com.kairo.player.ui.LocalKairoMotionEnabled
 import com.kairo.player.ui.rememberSystemAnimationsEnabled
 import com.kairo.player.ui.screens.AudioQualityDetails
+import com.kairo.player.ui.screens.AlbumDetailScreen
+import com.kairo.player.ui.screens.ArtistDetailScreen
 import com.kairo.player.ui.screens.DiagnosticsScreen
 import com.kairo.player.ui.screens.HomeScreen
 import com.kairo.player.ui.screens.LibraryScreen
@@ -82,6 +87,8 @@ private object KairoRoute {
     const val NowPlaying = "now_playing"
     const val Queue = "queue"
     const val Library = "library"
+    const val ArtistDetail = "artist/{sourceId}/{artistId}"
+    const val AlbumDetail = "album/{sourceId}/{albumId}"
     const val Diagnostics = "diagnostics"
     const val Settings = "settings"
 }
@@ -119,6 +126,7 @@ private fun KairoAppContent(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val isNowPlaying = currentDestination?.route == KairoRoute.NowPlaying
+    val isLibraryDetail = currentDestination?.route == KairoRoute.ArtistDetail || currentDestination?.route == KairoRoute.AlbumDetail
     val snackbarHostState = remember { SnackbarHostState() }
     val message by viewModel.message.collectAsStateWithLifecycle()
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
@@ -144,6 +152,13 @@ private fun KairoAppContent(
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (isLibraryDetail) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                },
                 title = {
                     Image(
                         painter = painterResource(R.drawable.kairo_logo),
@@ -176,7 +191,8 @@ private fun KairoAppContent(
                 }
                 NavigationBar {
                     mainDestinations.forEach { destination ->
-                        val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
+                        val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                            (destination.route == KairoRoute.Library && isLibraryDetail)
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
@@ -243,8 +259,39 @@ private fun KairoAppContent(
             composable(KairoRoute.Library) {
                 LibraryDestination(viewModel) { route -> navController.navigate(route) }
             }
+            composable(
+                route = KairoRoute.ArtistDetail,
+                arguments = listOf(
+                    navArgument("sourceId") { type = NavType.StringType },
+                    navArgument("artistId") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                ArtistDetailDestination(
+                    viewModel = viewModel,
+                    sourceId = entry.arguments?.getString("sourceId").orEmpty(),
+                    artistId = entry.arguments?.getString("artistId").orEmpty(),
+                ) { sourceId, albumId ->
+                    navController.navigate("album/${Uri.encode(sourceId)}/${Uri.encode(albumId)}")
+                }
+            }
+            composable(
+                route = KairoRoute.AlbumDetail,
+                arguments = listOf(
+                    navArgument("sourceId") { type = NavType.StringType },
+                    navArgument("albumId") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                AlbumDetailDestination(
+                    viewModel = viewModel,
+                    sourceId = entry.arguments?.getString("sourceId").orEmpty(),
+                    albumId = entry.arguments?.getString("albumId").orEmpty(),
+                    openNowPlaying = { navController.navigate(KairoRoute.NowPlaying) },
+                )
+            }
             composable(KairoRoute.Diagnostics) { DiagnosticsDestination(viewModel) }
             composable(KairoRoute.Settings) {
+                val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+                val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle()
                 SettingsScreen(
                     versionName = versionName,
                     onAddMusicFolder = { folderPicker.launch(null) },
@@ -253,6 +300,9 @@ private fun KairoAppContent(
                     serverUser = viewModel.savedServerUser,
                     serverPassword = viewModel.savedServerPassword,
                     onSaveServer = viewModel::saveServerAndTest,
+                    syncState = syncState,
+                    syncProgress = syncProgress,
+                    onResyncLibrary = viewModel::triggerLibrarySync,
                 )
             }
         }
@@ -405,17 +455,63 @@ private fun QueueDestination(viewModel: KairoViewModel, openNowPlaying: () -> Un
 private fun LibraryDestination(viewModel: KairoViewModel, navigate: (String) -> Unit) {
     val library by viewModel.libraryState.collectAsStateWithLifecycle()
     LibraryScreen(
-        tracks = library.tracks,
-        albums = library.albums,
-        artists = library.artists,
+        tracks = library.tracks.filter { it.sourceId == "navidrome" },
+        albums = library.albums.filter { it.sourceId == "navidrome" },
+        artists = library.artists.filter { it.sourceId == "navidrome" },
         playlists = library.playlists.map { PlaylistVisual(it.id, it.name, it.trackKeys.size) },
         recentlyPlayed = library.recentlyPlayed,
         isLoading = library.isLoading,
         errorMessage = library.error,
         onTrackClick = { track -> viewModel.playTrack(track); navigate(KairoRoute.NowPlaying) },
-        onAlbumClick = { album -> viewModel.playAlbum(album); navigate(KairoRoute.NowPlaying) },
-        onArtistClick = { artist -> viewModel.playArtist(artist); navigate(KairoRoute.NowPlaying) },
+        onAlbumClick = { album -> navigate("album/${Uri.encode(album.sourceId)}/${Uri.encode(album.id)}") },
+        onArtistClick = { artist -> navigate("artist/${Uri.encode(artist.sourceId)}/${Uri.encode(artist.id)}") },
         onPlaylistClick = { id -> viewModel.playPlaylist(id); navigate(KairoRoute.NowPlaying) },
+    )
+}
+
+@Composable
+private fun ArtistDetailDestination(
+    viewModel: KairoViewModel,
+    sourceId: String,
+    artistId: String,
+    openAlbum: (String, String) -> Unit,
+) {
+    val detail by viewModel.artistDetailState.collectAsStateWithLifecycle()
+    LaunchedEffect(sourceId, artistId) { viewModel.loadArtistDetail(sourceId, artistId) }
+    ArtistDetailScreen(
+        artist = detail.artist,
+        albums = detail.albums,
+        isLoading = detail.isLoading || detail.artistId != artistId,
+        errorMessage = detail.error,
+        onAlbumClick = { album -> openAlbum(album.sourceId, album.id) },
+    )
+}
+
+@Composable
+private fun AlbumDetailDestination(
+    viewModel: KairoViewModel,
+    sourceId: String,
+    albumId: String,
+    openNowPlaying: () -> Unit,
+) {
+    val detail by viewModel.albumDetailState.collectAsStateWithLifecycle()
+    LaunchedEffect(sourceId, albumId) { viewModel.loadAlbumDetail(sourceId, albumId) }
+    AlbumDetailScreen(
+        album = detail.album,
+        tracks = detail.tracks,
+        isLoading = detail.isLoading || detail.albumId != albumId,
+        errorMessage = detail.error,
+        onPlayAll = {
+            viewModel.playTracks(detail.tracks, 0)
+            openNowPlaying()
+        },
+        onTrackClick = { track ->
+            val selectedIndex = detail.tracks.indexOf(track)
+            if (selectedIndex >= 0) {
+                viewModel.playTracks(detail.tracks, selectedIndex)
+                openNowPlaying()
+            }
+        },
     )
 }
 

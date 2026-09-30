@@ -17,3 +17,6 @@ out/
 secrets.properties
 .env
 .env.*
+!.env.example
+sync-state/
+tailscale-state/

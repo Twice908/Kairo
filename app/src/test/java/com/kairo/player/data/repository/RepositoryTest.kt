@@ -2,6 +2,11 @@ package com.kairo.player.data.repository
 
 import androidx.room.Room
 import com.kairo.player.data.local.KairoDatabase
+import com.kairo.player.server.NavidromeApiService
+import com.kairo.player.server.ServerConfig
+import com.kairo.player.server.SubsonicEnvelope
+import com.kairo.player.server.SubsonicResponse
+import com.kairo.player.server.SubsonicUrlBuilder
 import com.kairo.player.domain.model.Album
 import com.kairo.player.domain.model.AlbumArt
 import com.kairo.player.domain.model.Artist
@@ -24,6 +29,7 @@ import org.robolectric.annotation.Config
 class RepositoryTest {
     private lateinit var database: KairoDatabase
     private lateinit var trackRepository: TrackRepository
+    private lateinit var libraryRepository: LibraryRepository
     private lateinit var playlistRepository: PlaylistRepository
     private lateinit var historyRepository: HistoryRepository
 
@@ -34,6 +40,21 @@ class RepositoryTest {
             KairoDatabase::class.java,
         ).allowMainThreadQueries().build()
         trackRepository = TrackRepository(database)
+        val serverConfig = ServerConfig(RuntimeEnvironment.getApplication())
+        val api = object : NavidromeApiService {
+            override suspend fun ping(): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun getArtists(): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun getArtist(id: String): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun getArtistInfo2(id: String): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun getAlbum(id: String): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun getSong(id: String): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun search3(query: String, artistCount: Int, albumCount: Int, songCount: Int): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun getAlbumList2(type: String, size: Int, offset: Int): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun startScan(): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+            override suspend fun getScanStatus(): SubsonicEnvelope = SubsonicEnvelope(SubsonicResponse(status = "ok"))
+        }
+        val syncEngine = com.kairo.player.data.sync.LibrarySyncEngine(api, serverConfig, database, SubsonicUrlBuilder(serverConfig))
+        libraryRepository = LibraryRepository(database, trackRepository, syncEngine)
         playlistRepository = PlaylistRepository(database.playlistDao(), trackRepository)
         historyRepository = HistoryRepository(database.playbackHistoryDao(), trackRepository)
     }
@@ -62,6 +83,34 @@ class RepositoryTest {
         assertEquals(track.copy(album = album.copy(artwork = album.artwork?.copy(data = null))), loaded.copy(album = loaded.album?.copy(artwork = loaded.album.artwork?.copy(data = null))))
         assertArrayEquals(album.artwork?.data, loaded.album?.artwork?.data)
         assertEquals(track, trackRepository.observeTracks().first().single().copy(album = album))
+    }
+
+    @Test
+    fun libraryRepositoryObservesDetailEntities() = runBlocking {
+        val artist = Artist("artist-1", "navidrome", "Artist")
+        val album = Album(
+            id = "album-1",
+            sourceId = "navidrome",
+            title = "Album",
+            artists = listOf(artist),
+            artwork = AlbumArt("https://example.com/cover.jpg", "image/jpeg", byteArrayOf(1, 2, 3)),
+            releaseYear = 2024,
+        )
+        val track = Track("track-1", "navidrome", "Track", listOf(artist), album, 90_000L)
+
+        trackRepository.saveTrack(track)
+
+        val observedArtist = libraryRepository.observeArtist("artist-1").first()
+        val observedAlbums = libraryRepository.observeAlbumsForArtist("artist-1").first()
+        val observedAlbum = libraryRepository.observeAlbum("album-1").first()
+        val observedTracks = libraryRepository.observeTracksForAlbum("album-1").first()
+        val observedArtistForAlbum = libraryRepository.observeArtistForAlbum("album-1").first()
+
+        assertEquals("Artist", observedArtist?.name)
+        assertEquals(1, observedAlbums.size)
+        assertEquals("Album", observedAlbum?.title)
+        assertEquals(1, observedTracks.size)
+        assertEquals("Artist", observedArtistForAlbum?.name)
     }
 
     @Test

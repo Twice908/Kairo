@@ -13,6 +13,9 @@ interface NavidromeApiService {
     @GET("rest/getArtist")
     suspend fun getArtist(@Query("id") id: String): SubsonicEnvelope
 
+    @GET("rest/getArtistInfo2")
+    suspend fun getArtistInfo2(@Query("id") id: String): SubsonicEnvelope
+
     @GET("rest/getAlbum")
     suspend fun getAlbum(@Query("id") id: String): SubsonicEnvelope
 

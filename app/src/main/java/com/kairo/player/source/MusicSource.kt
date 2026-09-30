@@ -2,6 +2,7 @@ package com.kairo.player.source
 
 import com.kairo.player.domain.model.Album
 import com.kairo.player.domain.model.Artist
+import com.kairo.player.domain.model.MusicLibrary
 import com.kairo.player.domain.model.StreamInfo
 import com.kairo.player.domain.model.Track
 
@@ -14,4 +15,17 @@ interface MusicSource {
     suspend fun resolveStream(trackId: String): List<StreamInfo>
     suspend fun getArtist(artistId: String): Artist?
     suspend fun getAlbum(albumId: String): Album?
+
+    suspend fun browseLibrary(): MusicLibrary {
+        val tracks = search("")
+        return MusicLibrary(
+            tracks = tracks,
+            albums = tracks.mapNotNull { it.album }.distinctBy { it.id },
+            artists = tracks.flatMap { it.artists }.distinctBy { it.id },
+        )
+    }
+
+    suspend fun getAlbumTracks(albumId: String): List<Track> = emptyList()
+    suspend fun getArtistAlbums(artistId: String): List<Album> = emptyList()
+    suspend fun getArtistBiography(artistId: String): String? = null
 }

@@ -1,0 +1,135 @@
+version: "3.8"
+
+services:
+  # ── 1. SOULSEEK CLIENT ──────────────────────────────────────────
+  slskd:
+    image: slskd/slskd:latest
+    container_name: slskd
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "5030:5030"       # Web UI
+      - "50300:50300"     # Soulseek P2P (for incoming connections)
+      - "50301:50301"     # Soulseek P2P (obfuscated)
+    volumes:
+      # Provide ./slskd-data/slskd.yml; slskd reads it as /app/slskd.yml.
+      - ./slskd-data:/app
+      - ./music/slskd_downloads:/downloads
+      - ./music/incomplete:/incomplete
+    environment:
+      - SLSKD_REMOTE_CONFIGURATION=true
+      - SLSKD_USERNAME=kairo
+      - SLSKD_PASSWORD=${SLSKD_PASSWORD}
+      - SLSKD_API_KEY=${SLSKD_API_KEY}
+      - SLSKD_DOWNLOADS_DIR=/downloads
+      - SLSKD_INCOMPLETE_DIR=/incomplete
+      - SLSKD_SHARED_DIR=/downloads
+    healthcheck:
+      test: wget -O /dev/null http://localhost:5030 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── 2. LIDARR (LIBRARY MANAGER) ─────────────────────────────────
+  lidarr:
+    image: linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    ports:
+      - "8686:8686"
+    volumes:
+      - ./lidarr-config:/config
+      - ./music:/music
+      - ./music/slskd_downloads:/data/slskd_downloads
+    environment:
+      - PUID=501
+      - PGID=20
+      - TZ=Asia/Kolkata
+    healthcheck:
+      test: wget -O /dev/null http://localhost:8686 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── 3. SOULARR (LIDARR → SLSKD BRIDGE) ──────────────────────────
+  soularr:
+    image: mrusse08/soularr:latest
+    container_name: soularr
+    restart: unless-stopped
+    depends_on:
+      lidarr:
+        condition: service_healthy
+      slskd:
+        condition: service_healthy
+    volumes:
+      # Provide ./soularr-data/config.ini with the Lidarr and slskd settings.
+      - ./soularr-data:/data
+      - ./music/slskd_downloads:/downloads
+    environment:
+      - TZ=Asia/Kolkata
+      - SCRIPT_INTERVAL=300
+      - WEBUI_ENABLED=true
+    user: "501:20"
+
+  # ── 4. NAVIDROME (STREAMING SERVER) ─────────────────────────────
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    ports:
+      - "4533:4533"
+    volumes:
+      - ./navidrome-data:/data
+      - ./music:/music:ro
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_BASEURL=
+      - ND_TRANSCODINGCACHESIZE=100MB
+      # Disable transcoding to stream FLAC natively:
+      - ND_TRANSCODING_ENABLED=false
+
+  # ── 5. KAIRO SYNC API (FASTAPI) ────────────────────────────────
+  kairo-sync-api:
+    build: ./kairo-sync-api
+    container_name: kairo-sync-api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./music:/music
+      - ./sync-state:/state
+    environment:
+      - SYNC_USERNAME=${SYNC_USERNAME}
+      - SYNC_PASSWORD=${SYNC_PASSWORD}
+      - LIDARR_URL=http://lidarr:8686
+      - LIDARR_API_KEY=${LIDARR_API_KEY}
+      - NAVIDROME_URL=http://navidrome:4533
+      - NAVIDROME_USER=${NAVIDROME_USER}
+      - NAVIDROME_PASS=${NAVIDROME_PASS}
+
+  # ── 6. TAILSCALE (SECURE REMOTE ACCESS) ────────────────────────
+  # tailscale:
+  #   image: tailscale/tailscale:latest
+  #   container_name: tailscale
+  #   restart: unless-stopped
+  #   env_file:
+  #     - path: .env
+  #       required: false
+  #   network_mode: host
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - SYS_MODULE
+  #   volumes:
+  #     - ./tailscale-state:/var/lib/tailscale
+  #     - /dev/net/tun:/dev/net/tun
+  #   environment:
+  #     - TS_AUTHKEY=${TS_AUTHKEY}
+  #     - TS_STATE_DIR=/var/lib/tailscale
+  #     - TS_HOSTNAME=kairo-server

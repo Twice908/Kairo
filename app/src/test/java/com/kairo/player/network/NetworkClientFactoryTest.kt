@@ -18,11 +18,17 @@ class NetworkClientFactoryTest {
     }
 
     @Test
-    fun allowsOnlyHttpsBaseUrlsWithTrailingSlash() {
+    fun acceptsHttpsBaseUrlsWithTrailingSlash() {
         assertTrue(factory.createRetrofit("https://catalog.example.invalid/api/").baseUrl().isHttps)
-        assertThrows(IllegalArgumentException::class.java) {
-            factory.createRetrofit("http://catalog.example.invalid/api/")
-        }
+    }
+
+    @Test
+    fun acceptsHttpBaseUrlsForPrivateServers() {
+        assertTrue(!factory.createRetrofit("http://100.64.0.1:4533/api/").baseUrl().isHttps)
+    }
+
+    @Test
+    fun requiresTrailingSlashForAllBaseUrls() {
         assertThrows(IllegalArgumentException::class.java) {
             factory.createRetrofit("https://catalog.example.invalid/api")
         }

@@ -9,6 +9,7 @@ import com.kairo.player.data.local.dao.ArtistDao
 import com.kairo.player.data.local.dao.PlaybackHistoryDao
 import com.kairo.player.data.local.dao.PlaylistDao
 import com.kairo.player.data.local.dao.TrackDao
+import com.kairo.player.data.local.dao.SyncStateDao
 import com.kairo.player.data.local.KairoDatabase
 import dagger.Binds
 import dagger.Module
@@ -32,7 +33,9 @@ object PersistenceModule {
     @Provides
     @Singleton
     fun provideKairoDatabase(@ApplicationContext context: Context): KairoDatabase =
-        Room.databaseBuilder(context, KairoDatabase::class.java, DATABASE_NAME).build()
+        Room.databaseBuilder(context, KairoDatabase::class.java, DATABASE_NAME)
+            .addMigrations(KairoDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideTrackDao(database: KairoDatabase): TrackDao = database.trackDao()
@@ -49,6 +52,9 @@ object PersistenceModule {
 
     @Provides
     fun providePlaylistDao(database: KairoDatabase): PlaylistDao = database.playlistDao()
+
+    @Provides
+    fun provideSyncStateDao(database: KairoDatabase): SyncStateDao = database.syncStateDao()
 
     private const val DATABASE_NAME = "kairo.db"
 }

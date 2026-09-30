@@ -1,0 +1,12 @@
+soulseek:
+  username: pranal
+  password: Pranal@123
+
+web:
+  authentication:
+    username: kairo
+    password: Pranal@123
+    api_keys:
+      kairo:
+        key: e90220e058f680c4b4360fe1xxxxxxxx
+        role: administrator
