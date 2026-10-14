@@ -2835,6 +2835,7 @@
 2026-09-30 11:42:53.8|Warn|FetchAndParseRssService|No available indexers. check your configuration.
 2026-09-30 11:42:53.8|Info|DownloadDecisionMaker|No results found
 2026-09-30 11:42:53.8|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+<<<<<<< HEAD
 2026-09-30 13:45:47.6|Info|Bootstrap|Starting Lidarr - /app/lidarr/bin/Lidarr - Version 3.1.0.4875
 2026-09-30 13:45:47.9|Info|AppFolderInfo|Data directory is being overridden to [/config]
 2026-09-30 13:45:48.0|Info|AppFolderInfo|Data directory is being overridden to [/config]
@@ -2940,3 +2941,19 @@
 2026-09-30 14:31:52.7|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
 2026-09-30 14:43:14.9|Info|Microsoft.Hosting.Lifetime|Application is shutting down...
 2026-09-30 14:43:16.2|Info|ConsoleApp|Exiting main.
+=======
+2026-09-30 11:57:54.0|Info|RssSyncService|Starting RSS Sync
+2026-09-30 11:57:54.0|Warn|FetchAndParseRssService|No available indexers. check your configuration.
+2026-09-30 11:57:54.0|Info|DownloadDecisionMaker|No results found
+2026-09-30 11:57:54.0|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+2026-09-30 12:12:54.2|Info|RssSyncService|Starting RSS Sync
+2026-09-30 12:12:54.2|Warn|FetchAndParseRssService|No available indexers. check your configuration.
+2026-09-30 12:12:54.2|Info|DownloadDecisionMaker|No results found
+2026-09-30 12:12:54.2|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+2026-09-30 12:27:54.4|Info|RssSyncService|Starting RSS Sync
+2026-09-30 12:27:54.4|Warn|FetchAndParseRssService|No available indexers. check your configuration.
+2026-09-30 12:27:54.4|Info|DownloadDecisionMaker|No results found
+2026-09-30 12:27:54.4|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+2026-09-30 12:30:29.5|Info|Microsoft.Hosting.Lifetime|Application is shutting down...
+2026-09-30 12:30:29.6|Info|ConsoleApp|Exiting main.
+>>>>>>> 89a101eea0a94ca21b9dda4e8300b4f28055e810
