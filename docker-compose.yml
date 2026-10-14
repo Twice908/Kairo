@@ -1,4 +1,4 @@
-version: "3.8"
+# version: "3.8"
 
 services:
   # ── 1. SOULSEEK CLIENT ──────────────────────────────────────────
@@ -16,8 +16,8 @@ services:
     volumes:
       # Provide ./slskd-data/slskd.yml; slskd reads it as /app/slskd.yml.
       - ./slskd-data:/app
-      - ./music/slskd_downloads:/downloads
-      - ./music/incomplete:/incomplete
+      - /mnt/music/slskd_downloads:/downloads
+      - /mnt/music/incomplete:/incomplete
     environment:
       - SLSKD_REMOTE_CONFIGURATION=true
       - SLSKD_USERNAME=kairo
@@ -41,11 +41,11 @@ services:
       - "8686:8686"
     volumes:
       - ./lidarr-config:/config
-      - ./music:/music
-      - ./music/slskd_downloads:/data/slskd_downloads
+      - /mnt/music:/music
+      - /mnt/music/slskd_downloads:/data/slskd_downloads
     environment:
-      - PUID=501
-      - PGID=20
+      - PUID=1000
+      - PGID=1000
       - TZ=Asia/Kolkata
     healthcheck:
       test: wget -O /dev/null http://localhost:8686 || exit 1
@@ -66,12 +66,12 @@ services:
     volumes:
       # Provide ./soularr-data/config.ini with the Lidarr and slskd settings.
       - ./soularr-data:/data
-      - ./music/slskd_downloads:/downloads
+      - /mnt/music/slskd_downloads:/downloads
     environment:
       - TZ=Asia/Kolkata
       - SCRIPT_INTERVAL=300
       - WEBUI_ENABLED=true
-    user: "501:20"
+    user: "1000:1000"
 
   # ── 4. NAVIDROME (STREAMING SERVER) ─────────────────────────────
   navidrome:
@@ -82,7 +82,7 @@ services:
       - "4533:4533"
     volumes:
       - ./navidrome-data:/data
-      - ./music:/music:ro
+      - /mnt/music:/music:ro
     environment:
       - ND_SCANSCHEDULE=1h
       - ND_LOGLEVEL=info
@@ -103,7 +103,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./music:/music
+      - /mnt/music:/music
       - ./sync-state:/state
     environment:
       - SYNC_USERNAME=${SYNC_USERNAME}
@@ -115,21 +115,21 @@ services:
       - NAVIDROME_PASS=${NAVIDROME_PASS}
 
   # ── 6. TAILSCALE (SECURE REMOTE ACCESS) ────────────────────────
-  # tailscale:
-  #   image: tailscale/tailscale:latest
-  #   container_name: tailscale
-  #   restart: unless-stopped
-  #   env_file:
-  #     - path: .env
-  #       required: false
-  #   network_mode: host
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - SYS_MODULE
-  #   volumes:
-  #     - ./tailscale-state:/var/lib/tailscale
-  #     - /dev/net/tun:/dev/net/tun
-  #   environment:
-  #     - TS_AUTHKEY=${TS_AUTHKEY}
-  #     - TS_STATE_DIR=/var/lib/tailscale
-  #     - TS_HOSTNAME=kairo-server
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    volumes:
+      - ./tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_HOSTNAME=kairo-server

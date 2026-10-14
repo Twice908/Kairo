@@ -747,3 +747,140 @@
 2026-09-30 11:47:53.9|Debug|ImportListSyncService|No import lists with automatic add enabled
 2026-09-30 11:47:53.9|Debug|Api|[GET] /api/v1/command: 200.OK (6 ms)
 2026-09-30 11:47:53.9|Debug|Api|[GET] /api/v1/command: 200.OK (1 ms)
+2026-09-30 13:45:49.5|Debug|ProcessProvider|Found 0 processes with the name: Lidarr.Console
+2026-09-30 13:45:49.5|Debug|ProcessProvider|Found 1 processes with the name: Lidarr
+2026-09-30 13:45:49.6|Debug|ProcessProvider| - [152] Lidarr
+2026-09-30 13:45:49.7|Info|MigrationController|*** Migrating data source=/config/lidarr.db;cache size=-20000;datetimekind=Utc;journal mode=Wal;pooling=True;version=3;busytimeout=100 ***
+2026-09-30 13:45:49.9|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrating
+2026-09-30 13:45:49.9|Info|FluentMigrator.Runner.MigrationRunner|PerformDBOperation 
+2026-09-30 13:45:49.9|Info|NzbDrone.Core.Datastore.Migration.Framework.NzbDroneSQLiteProcessor|Performing DB Operation
+2026-09-30 13:45:50.1|Info|DatabaseEngineVersionCheck|SQLite 3.50.4
+2026-09-30 13:45:50.1|Info|FluentMigrator.Runner.MigrationRunner|=> 0.212149s
+2026-09-30 13:45:50.2|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrated
+2026-09-30 13:45:50.2|Info|FluentMigrator.Runner.MigrationRunner|=> 0.2401112s
+2026-09-30 13:45:50.3|Debug|MigrationController|Took: 00:00:00.6417274
+2026-09-30 13:45:50.3|Info|MigrationController|*** Migrating data source=/config/logs.db;cache size=-20000;datetimekind=Utc;journal mode=Wal;pooling=True;version=3;busytimeout=100 ***
+2026-09-30 13:45:50.4|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrating
+2026-09-30 13:45:50.4|Info|FluentMigrator.Runner.MigrationRunner|PerformDBOperation 
+2026-09-30 13:45:50.4|Info|NzbDrone.Core.Datastore.Migration.Framework.NzbDroneSQLiteProcessor|Performing DB Operation
+2026-09-30 13:45:50.5|Info|DatabaseEngineVersionCheck|SQLite 3.50.4
+2026-09-30 13:45:50.5|Info|FluentMigrator.Runner.MigrationRunner|=> 0.0816999s
+2026-09-30 13:45:50.5|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrated
+2026-09-30 13:45:50.5|Info|FluentMigrator.Runner.MigrationRunner|=> 0.0962957s
+2026-09-30 13:45:50.6|Debug|MigrationController|Took: 00:00:00.3178849
+2026-09-30 13:45:51.0|Debug|FingerprintingService|fpcalc version: 1.5.1
+2026-09-30 13:45:51.6|Info|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:8686
+2026-09-30 13:45:51.9|Debug|QualityDefinitionService|Setting up default quality config
+2026-09-30 13:45:52.7|Debug|NotificationFactory|Initializing Providers. Count 25
+2026-09-30 13:45:52.9|Debug|IndexerFactory|Initializing Providers. Count 10
+2026-09-30 13:45:52.9|Debug|ImportListFactory|Initializing Providers. Count 10
+2026-09-30 13:45:52.9|Debug|MetadataFactory|Initializing Providers. Count 3
+2026-09-30 13:45:53.0|Debug|DownloadClientFactory|Initializing Providers. Count 18
+2026-09-30 13:45:53.0|Info|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.
+2026-09-30 13:45:53.0|Info|Microsoft.Hosting.Lifetime|Hosting environment: Production
+2026-09-30 13:45:53.0|Info|Microsoft.Hosting.Lifetime|Content root path: /app/lidarr/bin
+2026-09-30 13:45:53.1|Info|ManagedHttpDispatcher|IPv4 is available: True, IPv6 will be disabled
+2026-09-30 13:46:22.8|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 13:46:22.9|Info|RssSyncService|Starting RSS Sync
+2026-09-30 13:46:22.9|Warn|FetchAndParseRssService|No available indexers. check your configuration.
+2026-09-30 13:46:22.9|Info|DownloadDecisionMaker|No results found
+2026-09-30 13:46:22.9|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+2026-09-30 13:46:22.9|Debug|PendingReleaseService|Removing failed releases from pending
+2026-09-30 13:51:52.9|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 13:56:53.0|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:01:23.1|Info|RssSyncService|Starting RSS Sync
+2026-09-30 14:01:23.1|Warn|FetchAndParseRssService|No available indexers. check your configuration.
+2026-09-30 14:01:23.1|Info|DownloadDecisionMaker|No results found
+2026-09-30 14:01:23.2|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+2026-09-30 14:01:23.2|Debug|PendingReleaseService|Removing failed releases from pending
+2026-09-30 14:01:23.2|Error|TaskExtensions|Task Error
+
+[v3.1.0.4875] System.Net.Http.HttpRequestException: Name does not resolve (lidarr.servarr.com:443)
+ ---> System.Net.Sockets.SocketException (0xFFFDFFFF): Name does not resolve
+   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+   at System.Net.Sockets.Socket.<ConnectAsync>g__WaitForConnectWithCancellation|285_0(AwaitableSocketAsyncEventArgs saea, ValueTask connectTask, CancellationToken cancellationToken)
+   at NzbDrone.Common.Http.Dispatchers.ManagedHttpDispatcher.attemptConnection(AddressFamily addressFamily, SocketsHttpConnectionContext context, CancellationToken cancellationToken) in ./NzbDrone.Common/Http/Dispatchers/ManagedHttpDispatcher.cs:line 329
+   at NzbDrone.Common.Http.Dispatchers.ManagedHttpDispatcher.onConnect(SocketsHttpConnectionContext context, CancellationToken cancellationToken) in ./NzbDrone.Common/Http/Dispatchers/ManagedHttpDispatcher.cs:line 315
+   at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.AddHttp2ConnectionAsync(QueueItem queueItem)
+   at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync(HttpRequestMessage request, Uri authUri, Boolean async, ICredentials credentials, Boolean preAuthenticate, Boolean isProxyAuth, Boolean doRequestAuth, HttpConnectionPool pool, CancellationToken cancellationToken)
+   at System.Net.Http.DecompressionHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+   at NzbDrone.Common.Http.Dispatchers.ManagedHttpDispatcher.GetResponseAsync(HttpRequest request, CookieContainer cookies) in ./NzbDrone.Common/Http/Dispatchers/ManagedHttpDispatcher.cs:line 115
+   at NzbDrone.Common.Http.HttpClient.ExecuteRequestAsync(HttpRequest request, CookieContainer cookieContainer) in ./NzbDrone.Common/Http/HttpClient.cs:line 157
+   at NzbDrone.Common.Http.HttpClient.ExecuteAsync(HttpRequest request) in ./NzbDrone.Common/Http/HttpClient.cs:line 70
+   at NzbDrone.Common.Http.HttpClient.Execute(HttpRequest request) in ./NzbDrone.Common/Http/HttpClient.cs:line 128
+   at NzbDrone.Core.HealthCheck.Checks.SystemTimeCheck.Check() in ./NzbDrone.Core/HealthCheck/Checks/SystemTimeCheck.cs:line 30
+   at NzbDrone.Core.HealthCheck.HealthCheckService.<ProcessHealthChecks>b__15_0(IProvideHealthCheck c) in ./NzbDrone.Core/HealthCheck/HealthCheckService.cs:line 98
+   at System.Linq.Enumerable.SelectListIterator`2.Fill(ReadOnlySpan`1 source, Span`1 destination, Func`2 func)
+   at System.Linq.Enumerable.SelectListIterator`2.ToList()
+   at NzbDrone.Core.HealthCheck.HealthCheckService.ProcessHealthChecks() in ./NzbDrone.Core/HealthCheck/HealthCheckService.cs:line 95
+   at NzbDrone.Core.HealthCheck.HealthCheckService.HandleAsync(IEvent message) in ./NzbDrone.Core/HealthCheck/HealthCheckService.cs:line 187
+   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+
+
+2026-09-30 14:01:53.1|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:06:53.2|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:11:53.2|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:16:23.3|Info|RssSyncService|Starting RSS Sync
+2026-09-30 14:16:23.3|Warn|FetchAndParseRssService|No available indexers. check your configuration.
+2026-09-30 14:16:23.3|Info|DownloadDecisionMaker|No results found
+2026-09-30 14:16:23.3|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+2026-09-30 14:16:23.3|Debug|PendingReleaseService|Removing failed releases from pending
+2026-09-30 14:16:53.3|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:18:42.2|Info|Microsoft.Hosting.Lifetime|Application is shutting down...
+2026-09-30 14:18:42.9|Info|ConsoleApp|Exiting main.
+2026-09-30 14:18:50.1|Debug|ProcessProvider|Found 0 processes with the name: Lidarr.Console
+2026-09-30 14:18:50.1|Debug|ProcessProvider|Found 1 processes with the name: Lidarr
+2026-09-30 14:18:50.1|Debug|ProcessProvider| - [153] Lidarr
+2026-09-30 14:18:50.3|Info|MigrationController|*** Migrating data source=/config/lidarr.db;cache size=-20000;datetimekind=Utc;journal mode=Wal;pooling=True;version=3;busytimeout=100 ***
+2026-09-30 14:18:50.4|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrating
+2026-09-30 14:18:50.4|Info|FluentMigrator.Runner.MigrationRunner|PerformDBOperation 
+2026-09-30 14:18:50.4|Info|NzbDrone.Core.Datastore.Migration.Framework.NzbDroneSQLiteProcessor|Performing DB Operation
+2026-09-30 14:18:50.5|Info|DatabaseEngineVersionCheck|SQLite 3.50.4
+2026-09-30 14:18:50.6|Info|FluentMigrator.Runner.MigrationRunner|=> 0.1385549s
+2026-09-30 14:18:50.6|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrated
+2026-09-30 14:18:50.6|Info|FluentMigrator.Runner.MigrationRunner|=> 0.156921s
+2026-09-30 14:18:50.7|Debug|MigrationController|Took: 00:00:00.3964726
+2026-09-30 14:18:50.7|Info|MigrationController|*** Migrating data source=/config/logs.db;cache size=-20000;datetimekind=Utc;journal mode=Wal;pooling=True;version=3;busytimeout=100 ***
+2026-09-30 14:18:50.7|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrating
+2026-09-30 14:18:50.7|Info|FluentMigrator.Runner.MigrationRunner|PerformDBOperation 
+2026-09-30 14:18:50.8|Info|NzbDrone.Core.Datastore.Migration.Framework.NzbDroneSQLiteProcessor|Performing DB Operation
+2026-09-30 14:18:50.8|Info|DatabaseEngineVersionCheck|SQLite 3.50.4
+2026-09-30 14:18:50.8|Info|FluentMigrator.Runner.MigrationRunner|=> 0.0585324s
+2026-09-30 14:18:50.8|Info|FluentMigrator.Runner.MigrationRunner|DatabaseEngineVersionCheck migrated
+2026-09-30 14:18:50.8|Info|FluentMigrator.Runner.MigrationRunner|=> 0.0688394s
+2026-09-30 14:18:50.9|Debug|MigrationController|Took: 00:00:00.1619134
+2026-09-30 14:18:51.0|Debug|FingerprintingService|fpcalc version: 1.5.1
+2026-09-30 14:18:51.4|Info|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:8686
+2026-09-30 14:18:51.6|Debug|QualityDefinitionService|Setting up default quality config
+2026-09-30 14:18:52.1|Debug|NotificationFactory|Initializing Providers. Count 25
+2026-09-30 14:18:52.2|Debug|IndexerFactory|Initializing Providers. Count 10
+2026-09-30 14:18:52.2|Debug|ImportListFactory|Initializing Providers. Count 10
+2026-09-30 14:18:52.3|Debug|MetadataFactory|Initializing Providers. Count 3
+2026-09-30 14:18:52.3|Debug|DownloadClientFactory|Initializing Providers. Count 18
+2026-09-30 14:18:52.3|Info|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.
+2026-09-30 14:18:52.3|Info|Microsoft.Hosting.Lifetime|Hosting environment: Production
+2026-09-30 14:18:52.3|Info|Microsoft.Hosting.Lifetime|Content root path: /app/lidarr/bin
+2026-09-30 14:18:52.4|Info|ManagedHttpDispatcher|IPv4 is available: True, IPv6 will be disabled
+2026-09-30 14:22:22.4|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:27:22.4|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:31:52.6|Info|RssSyncService|Starting RSS Sync
+2026-09-30 14:31:52.6|Warn|FetchAndParseRssService|No available indexers. check your configuration.
+2026-09-30 14:31:52.6|Info|DownloadDecisionMaker|No results found
+2026-09-30 14:31:52.7|Info|RssSyncService|RSS Sync Completed. Reports found: 0, Reports grabbed: 0
+2026-09-30 14:31:52.7|Debug|PendingReleaseService|Removing failed releases from pending
+2026-09-30 14:32:22.6|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:37:22.7|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:42:22.8|Debug|ImportListSyncService|No import lists with automatic add enabled
+2026-09-30 14:43:14.9|Info|Microsoft.Hosting.Lifetime|Application is shutting down...
+2026-09-30 14:43:16.2|Info|ConsoleApp|Exiting main.
